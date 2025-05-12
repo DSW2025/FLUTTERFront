@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:pakapp/presentation/providers/auth.provider.dart';
+import 'package:pakapp/presentation/providers/capacidad.priver.dart';
 import 'package:pakapp/presentation/providers/chat.provider.dart';
 import 'package:pakapp/presentation/providers/navigator.provider.dart';
 import 'package:pakapp/presentation/screens/chat.screen.dart';
@@ -23,6 +24,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ProvedorChat()),
         ChangeNotifierProvider(create: (_) => NavigationProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => CapacidadProvider())
       ],
       child: MaterialApp(
         initialRoute: '/',

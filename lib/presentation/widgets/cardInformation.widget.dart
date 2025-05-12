@@ -39,7 +39,7 @@ class _CartaInformacionState extends State<CartaInformacion> {
             border: Border.all(
               color: Colors.white.withValues(
                 alpha: 0.7,
-              ), // 👈 Bordecito visible
+              ), // 
               width: 1.5,
             ),
             borderRadius: BorderRadius.circular(30),
@@ -56,7 +56,7 @@ class _CartaInformacionState extends State<CartaInformacion> {
                   spacing: 10,
                   children: [
                     Text(
-                      "Descubre el espacio disponible",
+                      "Verifica el espacio disponible",
                       style: TextStyle(
                         fontWeight: FontWeight.w600,
                         fontSize: 18,

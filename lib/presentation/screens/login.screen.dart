@@ -16,7 +16,8 @@ class _VistaLoginState extends State<VistaLogin> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      resizeToAvoidBottomInset: true, // Esto permite que el teclado empuje el contenido
+      resizeToAvoidBottomInset:
+          true, // Esto permite que el teclado empuje el contenido
       body: Stack(
         children: [
           Positioned.fill(
@@ -58,7 +59,7 @@ class _VistaLoginState extends State<VistaLogin> {
                             ),
                             keyboardType: TextInputType.emailAddress,
                           ),
-                              
+
                           TextFormField(
                             controller: _passwordController,
                             decoration: InputDecoration(
@@ -70,7 +71,7 @@ class _VistaLoginState extends State<VistaLogin> {
                             ),
                             obscureText: true,
                           ),
-                              
+
                           Align(
                             alignment: Alignment.centerRight,
                             child: TextButton(
@@ -81,7 +82,7 @@ class _VistaLoginState extends State<VistaLogin> {
                         ],
                       ),
                     ),
-                    SizedBox(height: 40),      
+                    SizedBox(height: 40),
                     Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: Column(
@@ -111,7 +112,7 @@ class _VistaLoginState extends State<VistaLogin> {
                             },
                             child: const Text('Iniciar sesión'),
                           ),
-                              
+
                           ElevatedButton(
                             style: ElevatedButton.styleFrom(
                               backgroundColor: Colors.white,

@@ -6,10 +6,12 @@ class ImagenRelleno extends StatelessWidget {
   final double alto;
   final double ancho;
   final String? info;
+  final int? idEstante;
 
   const ImagenRelleno(
     this.info, {
     super.key,
+    this.idEstante,
     required this.porcentaje,
     required this.url,
     required this.alto,

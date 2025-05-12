@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:pakapp/data/services/registro.service.dart';
 import 'package:pakapp/presentation/screens/login.screen.dart';
 import 'package:google_fonts/google_fonts.dart';
 
@@ -25,14 +26,33 @@ class _VistaRegistroState extends State<VistaRegistro> {
     super.dispose();
   }
 
-  void _registrarUsuario() {
+  void _registrarUsuario() async {
     if (_formKey.currentState!.validate()) {
       final nombres = _nombresController.text;
       final apellidos = _apellidosController.text;
       final correo = _correoController.text;
       final password = _passwordController.text;
 
-      _formKey.currentState!.reset(); // clean
+      final result = await RegistroService.registrarUsuario(
+        nombres: nombres,
+        apellidos: apellidos,
+        correo: correo,
+        password: password,
+      );
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(result["message"])));
+
+      if (result["success"]) {
+        _formKey.currentState!.reset();
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => VistaLogin()),
+        );
+      }
     }
   }
 
@@ -156,8 +176,8 @@ class _VistaRegistroState extends State<VistaRegistro> {
                               ),
                               obscureText: true,
                               validator: (value) {
-                                if (value == null || value.length < 6) {
-                                  return 'La contraseña debe tener al menos 6 caracteres';
+                                if (value == null || value.length < 5) {
+                                  return 'La contraseña debe tener al menos 5 caracteres';
                                 }
                                 return null;
                               },
@@ -188,15 +208,7 @@ class _VistaRegistroState extends State<VistaRegistro> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        onPressed: () {
-                          _registrarUsuario;
-                          Navigator.push(
-                            context,
-                            MaterialPageRoute(
-                              builder: (context) => VistaLogin(),
-                            ),
-                          );
-                        },
+                        onPressed: _registrarUsuario,
                         child: const Text('Registrarse'),
                       ),
                     ),

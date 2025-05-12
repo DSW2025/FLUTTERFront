@@ -1,8 +1,8 @@
 import 'dart:ui';
-
 import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
-import 'package:pakapp/data/models/itemCode.model.dart';
+import 'package:pakapp/data/models/detalleCalzado.model.dart';
+import 'package:pakapp/data/services/calzado.service.dart';
 import 'package:pakapp/presentation/widgets/codeBarsCards.widget.dart';
 
 class VistaCodigoBarras extends StatefulWidget {
@@ -12,8 +12,8 @@ class VistaCodigoBarras extends StatefulWidget {
 }
 
 class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
-  List<ItemCodigo> items = [];
-
+  List<CalzadoDetalle> calzados = [];
+  MobileScannerController controller = MobileScannerController();
   String? _ultimoCodigo;
   bool _puedeEscanear = true;
   bool _buttonEnable = false;
@@ -22,9 +22,14 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
     if (!_puedeEscanear) return;
 
     for (final barcode in capture.barcodes) {
-      final String? code = barcode.rawValue;
+      String? code = barcode.rawValue?.trim();
 
-      if (code != null && code != _ultimoCodigo) {
+      // Si tiene 12 dígitos, conviértelo a EAN-13 anteponiendo un 0
+      if (code != null && code.length == 12) {
+        code = '0$code';
+      }
+
+      if (code != null && code.length == 13 && code != _ultimoCodigo) {
         setState(() {
           _ultimoCodigo = code;
           _puedeEscanear = false;
@@ -34,9 +39,9 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('Código: $code')));
-        await Future.delayed(
-          const Duration(seconds: 2),
-        ); // retraso de 2 segundos
+
+        await Future.delayed(const Duration(seconds: 2));
+
         setState(() {
           _puedeEscanear = true;
         });
@@ -48,81 +53,129 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
   Widget build(BuildContext context) {
     final double screenWidth = MediaQuery.of(context).size.width;
     final double screenHeight = MediaQuery.of(context).size.height;
+
     return Scaffold(
-      appBar: AppBar(title: const Text('Escanear código de barras')),
+      appBar: AppBar(
+        title: const Text('Escanear código de barras'),
+        backgroundColor: const Color(0xFF1E1E2E),
+        elevation: 0,
+      ),
       body: SafeArea(
         child: Stack(
           children: [
-            MobileScanner(onDetect: _onDetect),
-            Positioned(
-              top: screenHeight * 0.15,
-              left: 0,
+            // Escáner de fondo
+            MobileScanner(controller: controller, onDetect: _onDetect),
+            IconButton(
+              icon: Icon(Icons.flash_on),
+              onPressed: () => controller.toggleTorch(),
+            ),
+            // Marco del escáner tipo visor
+            Align(
+              alignment: Alignment.center,
               child: Container(
-                height: screenHeight * 0.85,
-                width: screenWidth,
-                color: Colors.transparent,
-                child: Column(
-                  spacing: screenHeight * 0.15,
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor:
-                            !_buttonEnable
-                                ? Colors.transparent
-                                : const Color.fromARGB(255, 8, 0, 255),
-                      ),
-                      onPressed:
+                width: screenWidth * 0.7,
+                height: screenHeight * 0.25,
+                decoration: BoxDecoration(
+                  border: Border.all(color: Colors.white, width: 2),
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+
+            // Botón flotante y lista de códigos
+            Positioned(
+              bottom: 20,
+              left: 16,
+              right: 16,
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  ElevatedButton.icon(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
                           _buttonEnable
-                              ? () {
-                                if (_ultimoCodigo != null) {
+                              ? const Color(0xFF3B82F6)
+                              : Colors.grey.shade600,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size(double.infinity, 48),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      elevation: 5,
+                    ),
+                    onPressed:
+                        _buttonEnable
+                            ? () async {
+                              if (_ultimoCodigo != null) {
+                                try {
+                                  final codigoLimpio = _ultimoCodigo!.trim();
+                                  final detalle =
+                                      await CalzadoService.obtenerDatosCalzado(
+                                        codigoLimpio,
+                                      );
                                   setState(() {
-                                    items.add(
-                                      ItemCodigo(codigo: _ultimoCodigo!),
-                                    );
+                                    calzados.add(detalle);
                                     _buttonEnable = false;
                                   });
+                                } catch (e) {
+                                  if (!mounted) return;
+                                  ScaffoldMessenger.of(
+                                    context,
+                                  ).showSnackBar(SnackBar(content: Text('error al cargar los datos')));
                                 }
                               }
-                              : null,
-                      child: const Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        child: Text(
-                          'Añadir',
-                          style: TextStyle(color: Colors.white),
-                        ),
-                      ),
-                    ),
+                            }
+                            : null,
 
-                    ClipRRect(
-                      child: BackdropFilter(
-                        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-                        child: Container(
-                          decoration: BoxDecoration(color: Colors.transparent),
-                          constraints: BoxConstraints(
-                            maxHeight: screenHeight * 0.4,
-                            maxWidth: screenWidth * 0.9,
+                    icon: const Icon(Icons.qr_code_scanner),
+                    label: const Text("Añadir código"),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  ClipRRect(
+                    borderRadius: BorderRadius.circular(16),
+                    child: BackdropFilter(
+                      filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
+                      child: Container(
+                        padding: const EdgeInsets.all(12),
+                        width: double.infinity,
+                        constraints: BoxConstraints(
+                          maxHeight: screenHeight * 0.35,
+                        ),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(16),
+                          border: Border.all(
+                            color: Colors.white.withValues(alpha: 0.4),
                           ),
-                          child: ListView.builder(
-                            shrinkWrap: true, // importante
-                            itemCount: items.length,
-                            itemBuilder: (context, index) {
-                              return Padding(
-                                padding: const EdgeInsets.only(bottom: 4),
-                                child: CartaCodigoBarras(
-                                  item: items[index],
-                                  onChanged: () {
-                                    setState(() {});
+                        ),
+                        child:
+                            calzados.isEmpty
+                                ? const Text(
+                                  'Aún no has agregado ningún código.',
+                                  style: TextStyle(color: Colors.white),
+                                )
+                                : ListView.builder(
+                                  shrinkWrap: true,
+                                  itemCount: calzados.length,
+                                  itemBuilder: (context, index) {
+                                    final calzado = calzados[index];
+                                    return Padding(
+                                      padding: const EdgeInsets.only(bottom: 6),
+                                      child: CartaCodigoBarras(
+                                        calzado: calzado,
+                                        onChanged: () {
+                                          setState(() {});
+                                        },
+                                      ),
+                                    );
                                   },
                                 ),
-                              );
-                            },
-                          ),
-                        ),
                       ),
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
             ),
           ],
