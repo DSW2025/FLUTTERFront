@@ -49,8 +49,9 @@ class CalzadoService {
     );
 
     if (response.statusCode == 200) {
-      final List<dynamic> data = jsonDecode(response.body);
-      return data.map((json) => Calzado.fromJson(json)).toList();
+      final Map<String, dynamic> decoded = jsonDecode(response.body);
+      final List<dynamic> data = decoded['data'];
+      return data.map((item) => Calzado.fromJson(item)).toList();
     } else {
       throw Exception('Error al obtener calzados: ${response.body}');
     }
@@ -86,9 +87,83 @@ class CalzadoService {
       }),
     );
     if (response.statusCode == 200 || response.statusCode == 201) {
-      return jsonDecode(response.body);
+      final decoded = jsonDecode(response.body) as Map<String, dynamic>;
+      return decoded['data'] as Map<String, dynamic>;
     } else {
       throw Exception('Error al enviar relación: ${response.body}');
+    }
+  }
+
+  static obtenerImagen(codigoBarras) async {
+    final url = Uri.parse(
+      'https://test-drive.org/api/calzados/$codigoBarras/imagen',
+    );
+
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('Token no encontrado');
+    }
+
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      final nombreArchivo = data['data']?['imagen']?['nombreArchivo'];
+      if (nombreArchivo != null) {
+        return 'https://test-drive.org/uploads/$nombreArchivo';
+      } else {
+        return null;
+      }
+    } else {
+      throw Exception('Error al obtener la imagen : ${response.body}');
+    }
+  }
+
+  static Future<bool> actualizarRelacionEstante({
+    required int idCalzadoEstante,
+    required String codigoBarras,
+    required int idEstante,
+    required int idTalla,
+    required int idColor,
+    required int cantidad,
+  }) async {
+    final url = Uri.parse(
+      'https://test-drive.org/api/relCaEs/$idCalzadoEstante',
+    );
+    final prefs = await SharedPreferences.getInstance();
+    final token = prefs.getString('token');
+
+    if (token == null) {
+      throw Exception('Token no encontrado');
+    }
+
+    final response = await http.put(
+      url,
+      headers: {
+        'Authorization': 'Bearer $token',
+        'Content-Type': 'application/json',
+      },
+      body: jsonEncode({
+        'codigoBarras': codigoBarras,
+        'idEstante': idEstante,
+        'idTalla': idTalla,
+        'idColor': idColor,
+        'cantidad': cantidad,
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      return true;
+    } else {
+      throw Exception('Error al actualizar relación: ${response.body}');
     }
   }
 }

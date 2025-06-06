@@ -75,7 +75,7 @@ class _VistaRegistroState extends State<VistaRegistro> {
         children: [
           Positioned.fill(
             child: Image.asset(
-              'assets/images/wallpapers/wallpaperRegister.jpg',
+              'assets/images/wallpapers/wallpaper2.jpg',
               fit: BoxFit.cover,
             ),
           ),

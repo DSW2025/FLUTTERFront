@@ -1,13 +1,14 @@
 import 'package:flutter/material.dart';
+import 'package:pakapp/presentation/providers/chat.provider.dart';
+import 'package:provider/provider.dart';
 
 class CajaMensaje extends StatelessWidget {
-  final ValueChanged<String> onValue;
-  const CajaMensaje({super.key, required this.onValue});
+  const CajaMensaje({super.key});
 
   @override
   Widget build(BuildContext context) {
     final textController = TextEditingController();
-    final focusNode = FocusNode(); // <-- nuevo
+    final focusNode = FocusNode();
 
     final outlinedInputBorder = UnderlineInputBorder(
       borderSide: const BorderSide(color: Colors.black),
@@ -24,7 +25,7 @@ class CajaMensaje extends StatelessWidget {
           final text = textController.text.trim();
           if (text.isEmpty) return;
 
-          onValue(text);
+          context.read<ProvedorChat>().sendMessage(text);
           textController.clear();
           focusNode.requestFocus();
         },
@@ -39,7 +40,7 @@ class CajaMensaje extends StatelessWidget {
         final text = value.trim();
         if (text.isEmpty) return;
 
-        onValue(text);
+        context.read<ProvedorChat>().sendMessage(text);
         textController.clear();
         focusNode.requestFocus();
       },

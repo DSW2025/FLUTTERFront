@@ -17,7 +17,7 @@ class _VistaLoginState extends State<VistaLogin> {
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset:
-          true, // Esto permite que el teclado empuje el contenido
+          true, 
       body: Stack(
         children: [
           Positioned.fill(
@@ -72,13 +72,7 @@ class _VistaLoginState extends State<VistaLogin> {
                             obscureText: true,
                           ),
 
-                          Align(
-                            alignment: Alignment.centerRight,
-                            child: TextButton(
-                              onPressed: () {},
-                              child: const Text('¿Olvidaste tu contraseña?'),
-                            ),
-                          ),
+                          
                         ],
                       ),
                     ),

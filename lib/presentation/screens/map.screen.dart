@@ -1,13 +1,13 @@
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
-import 'package:pakapp/data/models/detalleCalzado.model.dart';
-import 'package:pakapp/data/models/calzadoEstante.model.dart';
-import 'package:pakapp/data/services/calzado.service.dart';
-import 'package:pakapp/data/services/estante.service.dart';
+import 'package:pakapp/presentation/providers/calzadoPorEstante.provider.dart';
+import 'package:pakapp/presentation/providers/estante.provider.dart';
 import 'package:pakapp/presentation/widgets/appBar.widget.dart';
+import 'package:pakapp/presentation/widgets/cardMapShoe.widget.dart';
 import 'package:pakapp/presentation/widgets/navigator.widget.dart';
 import 'package:pakapp/presentation/widgets/progressContainer.widget.dart';
+import 'package:provider/provider.dart';
 
 class VistaMapaEstanterias extends StatefulWidget {
   const VistaMapaEstanterias({super.key});
@@ -16,66 +16,66 @@ class VistaMapaEstanterias extends StatefulWidget {
 }
 
 class _VistaMapaEstanteriasState extends State<VistaMapaEstanterias> {
-  final String url = 'assets/images/elements/elementShelf.png';
-  final double tamano = 100;
-
-  Future<List<ImagenRelleno>> _cargarEstantes() async {
-    final estantes = await EstanteService.obtenerEstantes();
-    return estantes.map((estante) {
-      final porcentaje =
-          estante.capacidadMaxima == 0
-              ? 0.0
-              : estante.capacidadOcupada / estante.capacidadMaxima;
-
-      final texto = """ID: ${estante.idEstante} 
-Ubicación: ${estante.localizacion} 
-Ocupado: ${estante.capacidadOcupada}
-Disponibles: ${estante.capacidadMaxima}""";
-
-      return ImagenRelleno(
-        idEstante: estante.idEstante,
-        texto,
-        porcentaje: porcentaje,
-        url: url,
-        alto: tamano,
-        ancho: tamano,
-      );
-    }).toList();
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() {
+      context.read<EstantesProvider>().cargarEstantes();
+    });
   }
 
   @override
   Widget build(BuildContext context) {
+    final estantesProvider = context.watch<EstantesProvider>();
     return Scaffold(
       appBar: MyAppBar(titulo: 'ESTANTES'),
       body: SafeArea(
-        child: FutureBuilder<List<ImagenRelleno>>(
-          future: _cargarEstantes(),
-          builder: (context, snapshot) {
-            if (snapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            } else if (snapshot.hasError) {
-              return Center(child: Text('Error: ${snapshot.error}'));
-            } else {
-              return _MapView(estantes: snapshot.data!);
-            }
-          },
-        ),
+        child:
+            estantesProvider.error != null
+                ? Center(child: Text('Error: ${estantesProvider.error}'))
+                : (estantesProvider.estantes.isEmpty &&
+                    estantesProvider.cargando)
+                ? const Center(child: CircularProgressIndicator())
+                : Stack(
+                  children: [
+                    ChangeNotifierProvider(
+                      create: (_) => CalzadosPorEstanteProvider(),
+                      child: _MapView(estantes: estantesProvider.estantes),
+                    ),
+                    if (estantesProvider.cargando)
+                      Positioned.fill(
+                        child: Container(
+                          color: Colors.black45,
+                          child: const Center(
+                            child: CircularProgressIndicator(),
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
       ),
     );
   }
 }
 
 class _MapView extends StatefulWidget {
-  final List<ImagenRelleno> estantes;
+  final List<EstanteDatos> estantes;
   const _MapView({required this.estantes});
   @override
   State<_MapView> createState() => _MapViewState();
 }
 
 class _MapViewState extends State<_MapView> {
-  ImagenRelleno? imagenSeleccionada;
+  EstanteDatos? imagenSeleccionada;
+
+  void cargarCalzados(int idEstante) {
+    context.read<CalzadosPorEstanteProvider>().cargarPorEstante(idEstante);
+  }
+
   @override
   Widget build(BuildContext context) {
+    final calzadoProvider = context.watch<CalzadosPorEstanteProvider>();
+
     return Stack(
       children: [
         Positioned.fill(
@@ -84,13 +84,11 @@ class _MapViewState extends State<_MapView> {
             fit: BoxFit.cover,
           ),
         ),
-
         Column(
           children: [
             AnimatedSize(
               duration: const Duration(milliseconds: 300),
               curve: Curves.easeInOut,
-
               child: ClipRRect(
                 child: BackdropFilter(
                   filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
@@ -104,7 +102,7 @@ class _MapViewState extends State<_MapView> {
                     child: Container(
                       width: double.infinity,
                       decoration: BoxDecoration(
-                        color: Colors.transparent.withValues(alpha: 0.2),
+                        color: Colors.transparent.withOpacity(0.2),
                       ),
                       child: Padding(
                         padding: const EdgeInsets.symmetric(vertical: 50),
@@ -121,12 +119,25 @@ class _MapViewState extends State<_MapView> {
                                               setState(() {
                                                 imagenSeleccionada = estante;
                                               });
+                                              cargarCalzados(estante.idEstante);
                                             },
-                                            child: estante,
+                                            child: ImagenRelleno(
+                                              porcentaje: estante.porcentaje,
+                                              url:
+                                                  'assets/images/elements/elementShelf.png',
+                                              alto: 100.0,
+                                              ancho: 100.0,
+                                            ),
                                           );
                                         }).toList(),
                                   )
-                                  : imagenSeleccionada!,
+                                  : ImagenRelleno(
+                                    porcentaje: imagenSeleccionada!.porcentaje,
+                                    url:
+                                        'assets/images/elements/elementShelf.png',
+                                    alto: 100.0,
+                                    ancho: 100.0,
+                                  ),
                         ),
                       ),
                     ),
@@ -134,15 +145,13 @@ class _MapViewState extends State<_MapView> {
                 ),
               ),
             ),
-
             Expanded(
               child:
-                  imagenSeleccionada?.info == null
+                  imagenSeleccionada == null
                       ? const SizedBox()
                       : SingleChildScrollView(
                         child: Wrap(
                           children: [
-                            // informacion estante
                             Card(
                               elevation: 4,
                               margin: const EdgeInsets.all(8),
@@ -153,7 +162,7 @@ class _MapViewState extends State<_MapView> {
                                     child: Padding(
                                       padding: const EdgeInsets.all(10.0),
                                       child: Text(
-                                        imagenSeleccionada!.info!,
+                                        imagenSeleccionada!.info,
                                         style: const TextStyle(
                                           fontSize: 16,
                                           height: 1.6,
@@ -170,159 +179,33 @@ class _MapViewState extends State<_MapView> {
                                       setState(() {
                                         imagenSeleccionada = null;
                                       });
+                                      context
+                                          .read<CalzadosPorEstanteProvider>()
+                                          .limpiar();
                                     },
                                   ),
                                 ],
                               ),
                             ),
-
-                            // calzados estante
-                            if (imagenSeleccionada?.idEstante != null)
-                              FutureBuilder<List<CalzadoEstante>>(
-                                future:
-                                    EstanteService.obtenerCalzadosPorEstante(
-                                      imagenSeleccionada!.idEstante!,
-                                    ),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Padding(
-                                      padding: EdgeInsets.all(16.0),
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  } else if (snapshot.hasError) {
-                                    return Padding(
-                                      padding: const EdgeInsets.all(16.0),
-                                      child: Text("Error: ${snapshot.error}"),
-                                    );
-                                  } else {
-                                    final calzados = snapshot.data!;
-                                    return Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      children: [
-                                        ...calzados.map(
-                                          (calzado) => Card(
-                                            elevation: 4,
-                                            child: SizedBox(
-                                              width: double.infinity,
-                                              child: Padding(
-                                                padding: const EdgeInsets.all(
-                                                  10.0,
-                                                ),
-                                                child: FutureBuilder<
-                                                  CalzadoDetalle
-                                                >(
-                                                  future:
-                                                      CalzadoService.obtenerDatosCalzado(
-                                                        calzado.codigoBarras,
-                                                      ),
-                                                  builder: (context, snapshot) {
-                                                    if (snapshot
-                                                            .connectionState ==
-                                                        ConnectionState
-                                                            .waiting) {
-                                                      return Text(
-                                                        "- ${calzado.codigoBarras} (x${calzado.cantidad})\nCargando detalles...",
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                        ),
-                                                      );
-                                                    } else if (snapshot
-                                                        .hasError) {
-                                                      return Text(
-                                                        "- ${calzado.codigoBarras} (x${calzado.cantidad})\nError al cargar detalles",
-                                                        style: const TextStyle(
-                                                          fontSize: 16,
-                                                          color: Colors.red,
-                                                        ),
-                                                      );
-                                                    } else {
-                                                      final detalle =
-                                                          snapshot.data!;
-                                                      return Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        children: [
-                                                          Text(
-                                                            "Modelo: ${detalle.modelo}",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 16,
-                                                                ),
-                                                          ),
-                                                          Text(
-                                                            "[${detalle.codigoBarras}]",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 14,
-                                                                  color: Colors.grey
-                                                                ),
-                                                          ),
-                                                          const SizedBox(
-                                                            height: 8,
-                                                          ),
-                                                          Wrap(
-                                                            spacing: 8,
-                                                            children:
-                                                                detalle.colores.map<
-                                                                  Widget
-                                                                >((colorObj) {
-                                                                  final nombre =
-                                                                      colorObj['color'] ??
-                                                                      'Desconocido';
-                                                                  final color =
-                                                                      obtenerColorDesdeNombre(
-                                                                        nombre,
-                                                                      );
-                                                                  return Tooltip(
-                                                                    message:
-                                                                        nombre,
-                                                                    child: Container(
-                                                                      width: 24,
-                                                                      height:
-                                                                          24,
-                                                                      decoration: BoxDecoration(
-                                                                        color:
-                                                                            color,
-                                                                        borderRadius:
-                                                                            BorderRadius.circular(
-                                                                              4,
-                                                                            ),
-                                                                        border: Border.all(
-                                                                          color:
-                                                                              Colors.black26,
-                                                                        ),
-                                                                      ),
-                                                                    ),
-                                                                  );
-                                                                }).toList(),
-                                                          ),
-
-                                                          const SizedBox(
-                                                            height: 8,
-                                                          ),
-                                                          Text(
-                                                            "Cantidad: x${calzado.cantidad}",
-                                                            style:
-                                                                const TextStyle(
-                                                                  fontSize: 16,
-                                                                ),
-                                                          ),
-                                                        ],
-                                                      );
-                                                    }
-                                                  },
-                                                ),
-                                              ),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    );
-                                  }
-                                },
+                            if (calzadoProvider.cargando)
+                              const Padding(
+                                padding: EdgeInsets.all(16.0),
+                                child: CircularProgressIndicator(),
+                              )
+                            else if (calzadoProvider.error != null)
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text("Error: ${calzadoProvider.error}"),
+                              )
+                            else
+                              Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children:
+                                    calzadoProvider.calzados.map((calzado) {
+                                      calzado.idEstante =
+                                          imagenSeleccionada!.idEstante;
+                                      return CardMapWidget(calzado: calzado);
+                                    }).toList(),
                               ),
                           ],
                         ),
@@ -334,43 +217,29 @@ class _MapViewState extends State<_MapView> {
       ],
     );
   }
-}
 
-Color obtenerColorDesdeNombre(String nombre) {
-  switch (nombre.toLowerCase()) {
-    case 'amarillo':
-      return Colors.yellow;
-    case 'azul':
-      return Colors.blue;
-    case 'beige':
-      return Colors.redAccent;
-    case 'blanco':
-      return Colors.white;
-    case 'cafe':
-      return Colors.brown;
-    case 'gris':
-      return Colors.grey;
-    case 'morado':
-      return Colors.purple;
-    case 'multicolor':
-      return Colors.tealAccent;
-    case 'naranja':
-      return Colors.orange;
-    case 'negro':
-      return Colors.black;
-    case 'plata':
-      return Colors.blueGrey;
-    case 'rojo':
-      return Colors.red;
-    case 'rosa':
-      return Colors.pink;
-    case 'verde':
-      return Colors.green;
-    case 'crema':
-      return Colors.deepOrangeAccent;
-    case 'oro':
-      return Colors.amber;
-    default:
-      return Colors.grey.shade300;
+  @override
+  void didUpdateWidget(covariant _MapView oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.estantes != oldWidget.estantes) {
+      if (imagenSeleccionada != null) {
+        final matching = widget.estantes.where(
+          (e) => e.idEstante == imagenSeleccionada!.idEstante,
+        );
+        if (matching.isNotEmpty) {
+          final updatedEstante = matching.first;
+          if (imagenSeleccionada != updatedEstante) {
+            setState(() {
+              imagenSeleccionada = updatedEstante;
+            });
+          }
+        } else {
+          setState(() {
+            imagenSeleccionada = null;
+          });
+          context.read<CalzadosPorEstanteProvider>().limpiar();
+        }
+      }
+    }
   }
 }

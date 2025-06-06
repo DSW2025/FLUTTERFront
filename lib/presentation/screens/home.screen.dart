@@ -7,7 +7,6 @@ import 'package:pakapp/presentation/widgets/appBar.widget.dart';
 import 'package:pakapp/presentation/widgets/cardShoes.widget.dart';
 import 'package:pakapp/presentation/widgets/cardInformation.widget.dart';
 import 'package:pakapp/presentation/widgets/navigator.widget.dart';
-import 'package:pakapp/presentation/widgets/sercher.widget.dart';
 import 'package:provider/provider.dart';
 
 class VistaHome extends StatefulWidget {
@@ -20,12 +19,8 @@ class _VistaHomeState extends State<VistaHome> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() async {
-      if (!mounted) return;
-      await Provider.of<CapacidadProvider>(
-        context,
-        listen: false,
-      ).cargarCapacidad();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      Provider.of<CapacidadProvider>(context, listen: false).cargarCapacidad();
     });
   }
 
@@ -48,117 +43,24 @@ class _VistaHomeState extends State<VistaHome> {
             child: Column(
               children: [
                 Expanded(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.spaceAround,
-                    children: [
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        child: Buscador(),
-                      ),
-
-                      capacidad.disponibles == 0 && capacidad.porcentaje == 0
-                          ? CircularProgressIndicator()
-                          : CartaInformacion(
-                            porcentaje: capacidad.porcentaje,
-                            disponibles: capacidad.disponibles,
-                          ),
-
-                      Padding(
-                        padding: EdgeInsets.symmetric(horizontal: 10),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              "Calzados Destacados",
-                              style: TextStyle(
-                                fontSize: 20,
-                                fontWeight: FontWeight.w700,
-                              ),
+                  child: SingleChildScrollView(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        SizedBox(height: 20),
+                        capacidad.disponibles == 0 && capacidad.porcentaje == 0
+                            ? CircularProgressIndicator()
+                            : CartaInformacionMejorada(
+                              porcentaje: capacidad.porcentaje,
+                              disponibles: capacidad.disponibles,
                             ),
-
-                            SizedBox(
-                              height: 250,
-                              child: FutureBuilder<List<Calzado>>(
-                                future: CalzadoService.obtenerCalzados(),
-                                builder: (context, snapshot) {
-                                  if (snapshot.connectionState ==
-                                      ConnectionState.waiting) {
-                                    return const Center(
-                                      child: CircularProgressIndicator(),
-                                    );
-                                  } else if (snapshot.hasError) {
-                                    return Center(
-                                      child: Text('Error: ${snapshot.error}'),
-                                    );
-                                  } else {
-                                    final calzados = snapshot.data!;
-                                    final primeros10 = calzados.take(10);
-                                    final ultimos10 = calzados.skip(
-                                      calzados.length - 10,
-                                    );
-                                    final seleccionados = [
-                                      ...primeros10,
-                                      ...ultimos10,
-                                    ];
-                                    return ListView.builder(
-                                      scrollDirection: Axis.horizontal,
-                                      itemCount: seleccionados.length,
-                                      itemBuilder: (context, index) {
-                                        final calzado = seleccionados[index];
-
-                                        return FutureBuilder<CalzadoDetalle>(
-                                          future:
-                                              CalzadoService.obtenerDatosCalzado(
-                                                calzado.codigoBarras,
-                                              ),
-                                          builder: (context, detalleSnapshot) {
-                                            if (detalleSnapshot
-                                                    .connectionState ==
-                                                ConnectionState.waiting) {
-                                              return const SizedBox(
-                                                width: 160,
-                                                child: Center(
-                                                  child:
-                                                      CircularProgressIndicator(),
-                                                ),
-                                              );
-                                            } else if (detalleSnapshot
-                                                .hasError) {
-                                              return SizedBox(
-                                                width: 160,
-                                                child: Text(
-                                                  'Error: ${detalleSnapshot.error}',
-                                                  style: const TextStyle(
-                                                    color: Colors.red,
-                                                    fontSize: 12,
-                                                  ),
-                                                ),
-                                              );
-                                            } else {
-                                              final detalle =
-                                                  detalleSnapshot.data!;
-
-                                              final imagenUrl =
-                                                  'https://test-drive.org/uploads/${detalle.nombreArchivo}';
-
-                                              return Carta(
-                                                imagenUrl,
-                                                nombre: detalle.modelo,
-                                                estantes: detalle.estantes,
-                                              );
-                                            }
-                                          },
-                                        );
-                                      },
-                                    );
-                                  }
-                                },
-                              ),
-                            ),
-                          ],
+                        SizedBox(height: 10),
+                        Padding(
+                          padding: EdgeInsets.symmetric(horizontal: 10),
+                          child: CarruselCalzados(),
                         ),
-                      ),
-                    ],
+                      ],
+                    ),
                   ),
                 ),
                 BarraNavegadora(),
@@ -166,6 +68,143 @@ class _VistaHomeState extends State<VistaHome> {
             ),
           ),
         ],
+      ),
+    );
+  }
+}
+
+// Contenedor de carrusel mejorado
+class CarruselCalzados extends StatelessWidget {
+  const CarruselCalzados({super.key});
+
+  @override
+  Widget build(BuildContext context) {
+    return DobleCarruselCompacto();
+  }
+}
+
+class DobleCarruselCompacto extends StatelessWidget {
+  const DobleCarruselCompacto({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return FutureBuilder<List<Calzado>>(
+      future: CalzadoService.obtenerCalzados(),
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const SizedBox(
+            height: 180,
+            child: Center(child: CircularProgressIndicator()),
+          );
+        } else if (snapshot.hasError) {
+          return Center(child: Text('Error: ${snapshot.error}'));
+        }
+
+        final todos = snapshot.data!;
+        final primeros = todos.take(20).toList();
+        final ultimos = todos.skip(todos.length - 20).toList();
+
+        // Tamaño total del carrusel
+        const totalHeight = 450.0;
+        const trackHeight = totalHeight * 0.5;
+
+        return SizedBox(
+          height: totalHeight,
+          child: Stack(
+            children: [
+              // Pista superior: scroll normal
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                height: trackHeight,
+                child: _CarouselTrack(
+                  calzados: primeros,
+                  reverse: false,
+                  verticalPadding: 4,
+                ),
+              ),
+              // Pista inferior: scroll invertido
+              Positioned(
+                bottom: 0,
+                left: 0,
+                right: 0,
+                height: trackHeight,
+                child: _CarouselTrack(
+                  calzados: ultimos,
+                  reverse: true,
+                  verticalPadding: 4,
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+}
+
+/// Pista de carrusel horizontal compacta.
+class _CarouselTrack extends StatelessWidget {
+  final List<Calzado> calzados;
+  final bool reverse;
+  final double verticalPadding;
+
+  const _CarouselTrack({
+    required this.calzados,
+    required this.reverse,
+    this.verticalPadding = 8.0,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: EdgeInsets.symmetric(vertical: verticalPadding),
+      child: ListView.separated(
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+        scrollDirection: Axis.horizontal,
+        reverse: reverse,
+        physics: const BouncingScrollPhysics(),
+        itemCount: calzados.length,
+        separatorBuilder: (_, __) => const SizedBox(width: 12),
+        itemBuilder: (context, index) {
+          final calzado = calzados[index];
+          return FutureBuilder<CalzadoDetalle>(
+            future: CalzadoService.obtenerDatosCalzado(calzado.codigoBarras),
+            builder: (ctx, detSnap) {
+              if (detSnap.connectionState == ConnectionState.waiting) {
+                // Placeholder reducido
+                return Container(
+                  width: 140,
+                  margin: const EdgeInsets.symmetric(vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                );
+              } else if (detSnap.hasError) {
+                return SizedBox(
+                  width: 140,
+                  child: Center(
+                    child: Icon(Icons.error, color: Colors.red.shade400),
+                  ),
+                );
+              }
+              final detalle = detSnap.data!;
+              final imagenUrl =
+                  'https://test-drive.org/uploads/${detalle.nombreArchivo}';
+              // CartaMejorada adaptada a tamaño compacto
+              return SizedBox(
+                width: 140,
+                child: CartaMejorada(
+                  imagenUrl: imagenUrl,
+                  nombre: detalle.modelo,
+                  detalles: detalle,
+                ),
+              );
+            },
+          );
+        },
       ),
     );
   }

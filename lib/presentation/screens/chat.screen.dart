@@ -2,8 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:pakapp/data/models/message.model.dart';
 import 'package:pakapp/presentation/providers/chat.provider.dart';
 import 'package:pakapp/presentation/widgets/appBar.widget.dart';
-import 'package:pakapp/presentation/widgets/message.widget.dart';
 import 'package:pakapp/presentation/widgets/messageBox.wigdet.dart';
+import 'package:pakapp/presentation/widgets/message.widget.dart';
 import 'package:pakapp/presentation/widgets/navigator.widget.dart';
 import 'package:pakapp/presentation/widgets/otherMessage.widget.dart';
 import 'package:provider/provider.dart';
@@ -20,7 +20,6 @@ class _VistaChatbotState extends State<VistaChatBot> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: MyAppBar(titulo: 'CHATITO'),
-
       body: Stack(
         children: [
           Positioned.fill(
@@ -55,19 +54,30 @@ class _ChatView extends StatelessWidget {
         children: [
           Expanded(
             child: ListView.builder(
-              controller:
-                  provedorChat
-                      .chatScrollController, // enlace con el scrollcontroller
-              itemCount: provedorChat.listaMensajes.length,
+              controller: provedorChat.chatScrollController,
+              itemCount:
+                  provedorChat.listaMensajes.length +
+                  (provedorChat.escribiendo ? 1 : 0),
               itemBuilder: (context, index) {
-                final mensaje = provedorChat.listaMensajes[index];
-                return (mensaje.deQuien == DeQuien.mio)
-                    ? MiBurbujaMensaje(mensaje: mensaje)
-                    : OtraBurbujaMensaje(mensaje: mensaje);
+                if (index < provedorChat.listaMensajes.length) {
+                  final mensaje = provedorChat.listaMensajes[index];
+                  return (mensaje.deQuien == DeQuien.mio)
+                      ? MiBurbujaMensaje(mensaje: mensaje)
+                      : OtraBurbujaMensaje(mensaje: mensaje);
+                } else {
+                  // Mensaje de "escribiendo..."
+                  return const Padding(
+                    padding: EdgeInsets.all(8.0),
+                    child: Align(
+                      alignment: Alignment.centerLeft,
+                      child: Text("Escribiendo..."),
+                    ),
+                  );
+                }
               },
             ),
           ),
-          CajaMensaje(onValue: (value) => provedorChat.sendMessage(value)),
+          const CajaMensaje(),
         ],
       ),
     );

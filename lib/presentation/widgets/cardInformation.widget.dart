@@ -5,128 +5,153 @@ import 'package:pakapp/presentation/screens/map.screen.dart';
 import 'package:pakapp/presentation/widgets/progressContainer.widget.dart';
 import 'package:provider/provider.dart';
 
-class CartaInformacion extends StatefulWidget {
+class CartaInformacionMejorada extends StatelessWidget {
   final double porcentaje;
   final int disponibles;
-  const CartaInformacion({
-    super.key,
+
+  const CartaInformacionMejorada({
+    Key? key,
     required this.porcentaje,
     required this.disponibles,
-  });
-  @override
-  State<CartaInformacion> createState() => _CartaInformacionState();
-}
+  }) : super(key: key);
 
-class _CartaInformacionState extends State<CartaInformacion> {
   @override
   Widget build(BuildContext context) {
     final navProvider = context.watch<NavigationProvider>();
-    final double screenWidth = MediaQuery.of(context).size.width;
-    final double screenHeight = MediaQuery.of(context).size.height;
+    final size = MediaQuery.of(context).size;
+    // Tono azul corporativo
+    const accentBlue = Color.fromARGB(255, 0, 89, 255);
 
-    return ClipRRect(
-      borderRadius: BorderRadius.circular(30),
-      child: BackdropFilter(
-        filter: ImageFilter.blur(sigmaX: 5, sigmaY: 5),
-
-        child: Container(
-          height: screenHeight * 0.24,
-          width: screenWidth * 0.94,
-          decoration: BoxDecoration(
-            color: Colors.white.withValues(
-              alpha: 0.2,
-            ), // 👈 Color semitransparente
-            border: Border.all(
-              color: Colors.white.withValues(
-                alpha: 0.7,
-              ), // 
-              width: 1.5,
-            ),
-            borderRadius: BorderRadius.circular(30),
-          ),
-
-          child: Stack(
-            children: [
-              SizedBox(
-                width: screenWidth * 0.6,
-                height: screenHeight * 0.94,
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  spacing: 10,
+    return Center(
+      child: Stack(
+        clipBehavior: Clip.none,
+        children: [
+          // Glass card
+          ClipRRect(
+            borderRadius: BorderRadius.circular(24),
+            child: BackdropFilter(
+              filter: ImageFilter.blur(sigmaX: 16, sigmaY: 16),
+              child: Container(
+                width: size.width * 0.9,
+                padding: const EdgeInsets.symmetric(
+                  vertical: 24,
+                  horizontal: 16,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.white.withValues(alpha: 0.3),
+                  borderRadius: BorderRadius.circular(24),
+                  border: Border.all(
+                    color: Colors.white.withValues(alpha: 0.2),
+                    width: 1.5,
+                  ),
+                  boxShadow: [
+                    BoxShadow(
+                      color: const Color.fromARGB(255, 179, 179, 179),
+                      blurRadius: 24,
+                    ),
+                  ],
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      "Verifica el espacio disponible",
-                      style: TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 18,
-                        color: Colors.black,
-                      ),
-                    ),
-                
-                    Text(
-                      "${widget.disponibles} LIBRES",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 26,
-                        color: const Color.fromARGB(255, 0, 200, 255),
-                      ),
-                    ),
-                
-                    ElevatedButton(
-                      onPressed: () {
-                        navProvider.setIndex(1);
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => VistaMapaEstanterias(),
+                    // Progress left
+                    SizedBox(
+                      width: size.height * 0.18,
+                      height: size.height * 0.18,
+                      child: Stack(
+                        alignment: Alignment.center,
+                        children: [
+                          ImagenRelleno(
+                            alto: 200,
+                            ancho: 200,
+                            porcentaje: porcentaje,
+                            url:
+                                'assets/images/elements/elementProgressShoe.PNG',
                           ),
-                        );
-                      },
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color.fromARGB(
-                          255,
-                          0,
-                          89,
-                          255,
-                        ),
-                        padding: EdgeInsets.symmetric(
-                          horizontal: 20,
-                          vertical: 10,
-                        ),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(10),
-                        ),
-                        elevation: 4,
+                          Text(
+                            '${(porcentaje * 100).toInt()}%',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.headlineMedium?.copyWith(
+                              color: accentBlue,
+                              fontWeight: FontWeight.bold,
+                              shadows: [
+                                Shadow(
+                                  color: Colors.black38,
+                                  blurRadius: 4,
+                                  offset: Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
                       ),
-                      child: Text(
-                        "Explorar...",
-                        style: TextStyle(
-                          color: const Color.fromARGB(255, 255, 255, 255),
-                          fontWeight: FontWeight.bold,
-                        ),
+                    ),
+                    const SizedBox(width: 24),
+                    // Text and button
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            'Espacio Disponible',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.titleLarge?.copyWith(
+                              color: Colors.white,
+                              fontWeight: FontWeight.w700,
+                              shadows: [
+                                Shadow(color: Colors.black45, blurRadius: 6),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            '$disponibles espacios libres',
+                            style: Theme.of(
+                              context,
+                            ).textTheme.bodyLarge?.copyWith(
+                              color: accentBlue,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          const SizedBox(height: 20),
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              navProvider.setIndex(1);
+                              Navigator.pushReplacement(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => VistaMapaEstanterias(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.map, size: 20),
+                            label: const Text('Ver Mapa'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: accentBlue,
+                              foregroundColor: Colors.white,
+                              padding: const EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 24,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(14),
+                              ),
+                              elevation: 6,
+                            ),
+                          ),
+                        ],
                       ),
                     ),
                   ],
                 ),
               ),
-              Positioned(
-                top: screenHeight * 0.028,
-                left: screenWidth * 0.47,
-                child: Transform.rotate(
-                  angle: -0.7,
-                  child: ImagenRelleno(
-                    null,
-                    porcentaje: widget.porcentaje,
-                    url: 'assets/images/elements/elementProgressShoe.PNG',
-                    alto: screenHeight * 0.18,
-                    ancho: screenWidth * 0.4,
-                  ),
-                ),
-              ),
-            ],
+            ),
           ),
-        ),
+
+          // Floating accent circle
+        ],
       ),
     );
   }

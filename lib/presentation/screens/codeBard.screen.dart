@@ -3,7 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:pakapp/data/models/detalleCalzado.model.dart';
 import 'package:pakapp/data/services/calzado.service.dart';
+import 'package:pakapp/presentation/providers/navigator.provider.dart';
+import 'package:pakapp/presentation/screens/home.screen.dart';
+import 'package:pakapp/presentation/widgets/avatar.widget.dart';
 import 'package:pakapp/presentation/widgets/codeBarsCards.widget.dart';
+import 'package:provider/provider.dart';
 
 class VistaCodigoBarras extends StatefulWidget {
   const VistaCodigoBarras({super.key});
@@ -29,7 +33,7 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
         code = '0$code';
       }
 
-      if (code != null && code.length == 13 && code != _ultimoCodigo) {
+      if (code != null && code != _ultimoCodigo) {
         setState(() {
           _ultimoCodigo = code;
           _puedeEscanear = false;
@@ -56,9 +60,30 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
 
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Escanear código de barras'),
-        backgroundColor: const Color(0xFF1E1E2E),
-        elevation: 0,
+        titleTextStyle: const TextStyle(
+          color: Colors.black,
+          fontSize: 18,
+          fontWeight: FontWeight.w600,
+        ),
+        title: Text('Escanear código de barras'),
+        centerTitle: true,
+        elevation: 0.5,
+        backgroundColor: Colors.white,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back),
+          onPressed: () {
+            Navigator.of(context).pushReplacement(
+              MaterialPageRoute(builder: (context) => VistaHome()),
+            );
+            context.read<NavigationProvider>().setIndex(0);
+          },
+        ),
+        actions: const [
+          Padding(
+            padding: EdgeInsets.symmetric(horizontal: 10),
+            child: Perfil(),
+          ),
+        ],
       ),
       body: SafeArea(
         child: Stack(
@@ -119,9 +144,13 @@ class _VistaCodigoBarrasState extends State<VistaCodigoBarras> {
                                   });
                                 } catch (e) {
                                   if (!mounted) return;
-                                  ScaffoldMessenger.of(
-                                    context,
-                                  ).showSnackBar(SnackBar(content: Text('error al cargar los datos')));
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        'error al cargar los datos',
+                                      ),
+                                    ),
+                                  );
                                 }
                               }
                             }

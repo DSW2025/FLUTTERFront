@@ -4,4 +4,4 @@ class Mensaje{
   Mensaje({required this.texto, required this.deQuien});
 }
 
-enum DeQuien {mio, chat}
+enum DeQuien {mio, bot}

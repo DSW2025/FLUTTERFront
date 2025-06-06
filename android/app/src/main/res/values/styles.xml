@@ -1,18 +1,21 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Theme applied to the Android Window while the process is starting when the OS's Dark Mode setting is off -->
-    <style name="LaunchTheme" parent="@android:style/Theme.Light.NoTitleBar">
-        <!-- Show a splash screen on the activity. Automatically removed when
-             the Flutter engine draws its first frame -->
+    <!-- Tema para la pantalla de lanzamiento (splash) -->
+    <style name="LaunchTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Tu splash background -->
         <item name="android:windowBackground">@drawable/launch_background</item>
+        <!-- Opcional: si quieres que la barra de estado sea transparente -->
+        <item name="android:statusBarColor">@android:color/transparent</item>
     </style>
-    <!-- Theme applied to the Android Window as soon as the process has started.
-         This theme determines the color of the Android Window while your
-         Flutter UI initializes, as well as behind your Flutter UI while its
-         running.
 
-         This Theme is only used starting with V2 of Flutter's Android embedding. -->
-    <style name="NormalTheme" parent="@android:style/Theme.Light.NoTitleBar">
+    <!-- Tema principal de la app, basado en MaterialComponents -->
+    <style name="NormalTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <!-- Usa el color de background del sistema o define el tuyo -->
         <item name="android:windowBackground">?android:colorBackground</item>
+        <!-- Puedes personalizar atributos de MaterialComponents aquí:
+             <item name="colorPrimary">@color/tu_color_primary</item>
+             <item name="colorPrimaryVariant">@color/tu_color_primary_variant</item>
+             <item name="colorOnPrimary">@color/tu_color_on_primary</item>
+        -->
     </style>
 </resources>

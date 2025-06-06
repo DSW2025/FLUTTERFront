@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:pakapp/data/models/detalleCalzado.model.dart';
+import 'package:pakapp/data/models/estante.model.dart';
 import 'package:pakapp/data/services/calzado.service.dart';
+import 'package:pakapp/data/services/estante.service.dart';
 
 class CartaCodigoBarras extends StatefulWidget {
   final CalzadoDetalle calzado;
@@ -21,6 +23,8 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
   int? _idTallaSeleccionada;
   int? _idColorSeleccionado;
   int? _idEstanteSeleccionado;
+  List<Estante> _estantes = [];
+  bool _cargandoEstantes = true;
 
   @override
   void initState() {
@@ -28,12 +32,33 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
     _cantidadController = TextEditingController(
       text: widget.calzado.cantidad.toString(),
     );
+    _cargarEstantes();
   }
 
   @override
   void dispose() {
     _cantidadController.dispose();
     super.dispose();
+  }
+
+  Future<void> _cargarEstantes() async {
+    try {
+      // llamada al service corregido
+      final estantes = await EstanteService.obtenerEstantes();
+      setState(() {
+        _estantes = estantes;
+        _idEstanteSeleccionado ??=
+            estantes.isNotEmpty ? estantes.first.idEstante : null;
+        _cargandoEstantes = false;
+      });
+    } catch (e) {
+      setState(() => _cargandoEstantes = false);
+      if (context.mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error al cargar estantes: $e')));
+      }
+    }
   }
 
   void _actualizarCantidad(int nuevaCantidad) {
@@ -56,14 +81,12 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // Modelo del calzado
             Text(
               calzado.modelo,
               style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
 
-            // Desplegables: Color y Talla
             Row(
               children: [
                 Expanded(
@@ -72,16 +95,13 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
                     isExpanded: true,
                     items:
                         calzado.colores.map<DropdownMenuItem<int>>((c) {
-                          final idColor = c['idColor'];
-                          final color = c['color'] ?? 'Desconocido';
                           return DropdownMenuItem(
-                            value: idColor,
-                            child: Text(color),
+                            value: c['idColor'],
+                            child: Text(c['color'] ?? 'Desconocido'),
                           );
                         }).toList(),
-                    onChanged: (value) {
-                      setState(() => _idColorSeleccionado = value);
-                    },
+                    onChanged:
+                        (value) => setState(() => _idColorSeleccionado = value),
                     decoration: const InputDecoration(
                       labelText: 'Color',
                       border: OutlineInputBorder(),
@@ -96,16 +116,13 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
                     isExpanded: true,
                     items:
                         calzado.tallas.map<DropdownMenuItem<int>>((t) {
-                          final idTalla = t['idTalla'];
-                          final talla = t['talla']?.toString() ?? 'Talla';
                           return DropdownMenuItem(
-                            value: idTalla,
-                            child: Text(talla),
+                            value: t['idTalla'],
+                            child: Text(t['talla'].toString()),
                           );
                         }).toList(),
-                    onChanged: (value) {
-                      setState(() => _idTallaSeleccionada = value);
-                    },
+                    onChanged:
+                        (value) => setState(() => _idTallaSeleccionada = value),
                     decoration: const InputDecoration(
                       labelText: 'Talla',
                       border: OutlineInputBorder(),
@@ -118,118 +135,120 @@ class _CartaCodigoBarrasState extends State<CartaCodigoBarras> {
 
             const SizedBox(height: 10),
 
-            // Estante
-            DropdownButtonFormField<int>(
-              value: _idEstanteSeleccionado,
-              isExpanded: true,
-              items:
-                  calzado.estantes.map<DropdownMenuItem<int>>((e) {
-                    final id = e['idEstante'];
-                    final localizacion = e['localizacion'] ?? '---';
-                    return DropdownMenuItem(
-                      value: id,
-                      child: Text(localizacion),
-                    );
-                  }).toList(),
-              onChanged: (value) {
-                setState(() => _idEstanteSeleccionado = value);
-              },
-              decoration: const InputDecoration(
-                labelText: 'Estante',
-                border: OutlineInputBorder(),
-                isDense: true,
-              ),
-            ),
+            _cargandoEstantes
+                ? const Center(child: CircularProgressIndicator())
+                : DropdownButtonFormField<int>(
+                  value: _idEstanteSeleccionado,
+                  isExpanded: true,
+                  items:
+                      _estantes.map((e) {
+                        return DropdownMenuItem(
+                          value: e.idEstante,
+                          child: Text(e.localizacion),
+                        );
+                      }).toList(),
+                  onChanged: (value) {
+                    setState(() => _idEstanteSeleccionado = value);
+                  },
+                  decoration: const InputDecoration(
+                    labelText: 'Estante',
+                    border: OutlineInputBorder(),
+                    isDense: true,
+                  ),
+                ),
 
             const SizedBox(height: 10),
 
-            // Cantidad
             Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                IconButton(
-                  icon: const Icon(Icons.remove),
-                  onPressed: () {
-                    if (calzado.cantidad > 0) {
-                      _actualizarCantidad(calzado.cantidad - 1);
-                    }
-                  },
-                ),
-                SizedBox(
-                  width: 48,
-                  height: 36,
-                  child: Center(
-                    child: TextFormField(
-                      controller: _cantidadController,
-                      keyboardType: TextInputType.number,
-                      style: const TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      decoration: InputDecoration(
-                        contentPadding: const EdgeInsets.symmetric(
-                          vertical: 2,
-                          horizontal: 6,
-                        ),
-                        isDense: true,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                      ),
-                      onChanged: (value) {
-                        final parsed = int.tryParse(value);
-                        if (parsed != null && parsed >= 0) {
-                          widget.calzado.cantidad = parsed;
-                          widget.onChanged();
+                Row(
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.remove),
+                      onPressed: () {
+                        if (calzado.cantidad > 0) {
+                          _actualizarCantidad(calzado.cantidad - 1);
                         }
                       },
                     ),
-                  ),
+                    SizedBox(
+                      width: 48,
+                      height: 36,
+                      child: Center(
+                        child: TextFormField(
+                          controller: _cantidadController,
+                          keyboardType: TextInputType.number,
+                          style: const TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                          ),
+                          decoration: InputDecoration(
+                            contentPadding: const EdgeInsets.symmetric(
+                              vertical: 2,
+                              horizontal: 6,
+                            ),
+                            isDense: true,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(8),
+                            ),
+                          ),
+                          onChanged: (value) {
+                            final parsed = int.tryParse(value);
+                            if (parsed != null && parsed >= 0) {
+                              widget.calzado.cantidad = parsed;
+                              widget.onChanged();
+                            }
+                          },
+                        ),
+                      ),
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.add),
+                      onPressed:
+                          () => _actualizarCantidad(calzado.cantidad + 1),
+                    ),
+                  ],
                 ),
-                IconButton(
-                  icon: const Icon(Icons.add),
-                  onPressed: () {
-                    _actualizarCantidad(calzado.cantidad + 1);
-                  },
+
+                ElevatedButton.icon(
+                  icon: const Icon(Icons.send),
+                  label: const Text('Guardar relación'),
+                  onPressed:
+                      (_idEstanteSeleccionado != null &&
+                              _idTallaSeleccionada != null &&
+                              _idColorSeleccionado != null &&
+                              int.tryParse(_cantidadController.text) != null &&
+                              int.parse(_cantidadController.text) > 0)
+                          ? () async {
+                            final cantidad = int.parse(
+                              _cantidadController.text,
+                            );
+                            try {
+                              await CalzadoService.enviarRelacionCalzadoEstante(
+                                codigoBarras: calzado.codigoBarras,
+                                idEstante: _idEstanteSeleccionado!,
+                                idTalla: _idTallaSeleccionada!,
+                                idColor: _idColorSeleccionado!,
+                                cantidad: cantidad,
+                              );
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text(
+                                    'Relación guardada correctamente',
+                                  ),
+                                ),
+                              );
+                              widget.onChanged();
+                            } catch (e) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Error: $e')),
+                              );
+                            }
+                          }
+                          : null,
                 ),
               ],
-            ),
-
-            ElevatedButton.icon(
-              icon: const Icon(Icons.send),
-              label: const Text('Guardar relación'),
-              onPressed:
-                  (_idEstanteSeleccionado != null &&
-                          _idTallaSeleccionada != null &&
-                          _idColorSeleccionado != null &&
-                          int.tryParse(_cantidadController.text) != null &&
-                          int.parse(_cantidadController.text) > 0)
-                      ? () async {
-                        final cantidad = int.parse(_cantidadController.text);
-
-                        try {
-                          await CalzadoService.enviarRelacionCalzadoEstante(
-                            codigoBarras: widget.calzado.codigoBarras,
-                            idEstante: _idEstanteSeleccionado!,
-                            idTalla: _idTallaSeleccionada!,
-                            idColor: _idColorSeleccionado!,
-                            cantidad: cantidad,
-                          );
-
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Relación guardada correctamente'),
-                            ),
-                          );
-
-                          widget.onChanged(); // Notifica cambios externos
-                        } catch (e) {
-                          ScaffoldMessenger.of(
-                            context,
-                          ).showSnackBar(SnackBar(content: Text('Error: $e')));
-                        }
-                      }
-                      : null, // Desactiva si algún campo no está listo
             ),
           ],
         ),
